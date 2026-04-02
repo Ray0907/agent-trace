@@ -1,0 +1,26 @@
+{
+  "name": "agent-trace",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config ui/vite.config.ts",
+    "build": "tsc --noEmit -p ui/tsconfig.json && vite build --config ui/vite.config.ts",
+    "test": "vitest --run",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.10.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.10.1",
+    "@types/node": "24.10.0",
+    "@types/react": "19.2.4",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.1",
+    "typescript": "6.0.2",
+    "vite": "8.0.3",
+    "vitest": "4.1.0"
+  }
+}
