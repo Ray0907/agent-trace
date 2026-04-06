@@ -52,7 +52,11 @@ fn resolve_sessions_dir(override_dir: Option<PathBuf>) -> Result<PathBuf> {
     }
 
     let home_dir = dirs::home_dir().context("could not determine home directory")?;
-    Ok(home_dir.join(".claude").join("sessions"))
+    Ok(default_sessions_dir(home_dir))
+}
+
+fn default_sessions_dir(home_dir: PathBuf) -> PathBuf {
+    home_dir.join(".claude").join("projects")
 }
 
 async fn serve(port: u16, sessions_dir: PathBuf) -> Result<()> {
@@ -71,4 +75,19 @@ async fn list(sessions_dir: PathBuf) -> Result<()> {
     let sessions = state.list_summaries().await;
     println!("{}", serde_json::to_string_pretty(&sessions)?);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::default_sessions_dir;
+
+    #[test]
+    fn defaults_to_claude_projects_directory() {
+        assert_eq!(
+            default_sessions_dir(PathBuf::from("/tmp/home")),
+            PathBuf::from("/tmp/home/.claude/projects")
+        );
+    }
 }
