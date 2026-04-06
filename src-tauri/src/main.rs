@@ -1,13 +1,30 @@
 use std::net::TcpStream;
 use std::process::{Child, Command};
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use tauri::Manager;
+
+const DAEMON_ADDR: &str = "127.0.0.1:7842";
+const DAEMON_READY_TIMEOUT: Duration = Duration::from_secs(10);
+const DAEMON_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
 
 struct DaemonProcess(Mutex<Option<Child>>);
 
 fn daemon_already_running() -> bool {
-    TcpStream::connect("127.0.0.1:7842").is_ok()
+    TcpStream::connect(DAEMON_ADDR).is_ok()
+}
+
+/// Wait until the daemon's port accepts connections, up to `DAEMON_READY_TIMEOUT`.
+fn wait_for_daemon_ready() -> bool {
+    let deadline = Instant::now() + DAEMON_READY_TIMEOUT;
+    while Instant::now() < deadline {
+        if TcpStream::connect(DAEMON_ADDR).is_ok() {
+            return true;
+        }
+        std::thread::sleep(DAEMON_READY_POLL_INTERVAL);
+    }
+    false
 }
 
 fn spawn_daemon() -> Option<Child> {
@@ -22,11 +39,16 @@ fn spawn_daemon() -> Option<Child> {
 
     for path in &candidates {
         if std::path::Path::new(path).exists() {
+            eprintln!("agent-trace: spawning daemon from {path}");
             match Command::new(path).arg("serve").spawn() {
                 Ok(child) => {
-                    // Give the daemon a moment to bind the port.
-                    std::thread::sleep(std::time::Duration::from_millis(500));
-                    return Some(child);
+                    if wait_for_daemon_ready() {
+                        eprintln!("agent-trace: daemon is ready");
+                        return Some(child);
+                    } else {
+                        eprintln!("agent-trace: daemon did not become ready within timeout");
+                        return Some(child);
+                    }
                 }
                 Err(e) => eprintln!("agent-trace: failed to spawn daemon at {path}: {e}"),
             }
